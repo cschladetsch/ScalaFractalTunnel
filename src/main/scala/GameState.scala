@@ -77,7 +77,6 @@ object GameState {
       val x = center.x + radius * math.cos(angle).toFloat
       val y = center.y + radius * math.sin(angle).toFloat
       
-      // Pickup type distribution
       val pickupType = rng.nextFloat() match {
         case f if f < 0.6f => HealthPickup
         case f if f < 0.8f => ShieldPickup
@@ -86,7 +85,6 @@ object GameState {
       
       pickups = Pickup(Vec3(x, y, z.toFloat), pickupType, false) :: pickups
       
-      // Add obstacles
       if (z > 50 && rng.nextFloat() < 0.3f) {
         val oAngle = rng.nextFloat() * math.Pi.toFloat * 2f
         val oRadius = rng.nextFloat() * 4f + 1f
@@ -102,7 +100,6 @@ object GameState {
     var checkpointReached = false
     var checkpointMessage = ""
     
-    // Countdown
     if (!gameStarted) {
       countdownTime -= dt
       if (countdownTime <= 0) gameStarted = true
@@ -111,10 +108,9 @@ object GameState {
     
     distance = playerPos.z
     
-    // Speed increases
-    baseSpeed = math.min(3f + distance * 0.02f, 18f)
+    // SLOWER speed increase: 0.01 instead of 0.02 (half the acceleration rate)
+    baseSpeed = math.min(3f + distance * 0.01f, 18f)
     
-    // Slow time effect
     val timeMultiplier = if (slowTimeActive) {
       if (System.currentTimeMillis() > slowTimeEndTime) {
         slowTimeActive = false
@@ -124,12 +120,10 @@ object GameState {
     
     currentSpeed = baseSpeed * timeMultiplier
     
-    // Shield check
     if (shieldActive && System.currentTimeMillis() > shieldEndTime) {
       shieldActive = false
     }
     
-    // Checkpoint
     val checkpoint = (distance / 100).toInt * 100
     if (checkpoint > lastCheckpoint && checkpoint > 0) {
       lastCheckpoint = checkpoint
@@ -139,7 +133,6 @@ object GameState {
       ParticleSystem.spawn(playerPos, 30, (0, 255, 0))
     }
     
-    // Perfect section bonus
     if (perfectSectionActive && distance - perfectSectionStart >= 50f) {
       perfectSectionStart = distance
       comboMultiplier = math.min(comboMultiplier + 0.5f, 5f)
@@ -148,7 +141,6 @@ object GameState {
       ParticleSystem.spawn(playerPos, 20, (255, 255, 0))
     }
     
-    // Pickup collection
     pickups = pickups.map { pickup =>
       if (!pickup.collected && (playerPos - pickup.position).length < 1.5f) {
         pickup.pickupType match {
@@ -168,7 +160,6 @@ object GameState {
       } else pickup
     }
     
-    // Obstacle collision
     for (obstacle <- obstacles if (playerPos - obstacle.position).length < 1.2f) {
       if (!shieldActive) {
         health -= 30f
@@ -179,7 +170,6 @@ object GameState {
       }
     }
     
-    // Wall damage
     val (distToWall, _) = RayMarcher.sceneSDF(playerPos)
     if (distToWall < 1.5f && !shieldActive) {
       val damageRate = (1.5f - distToWall) * 15f
@@ -190,7 +180,6 @@ object GameState {
       comboTime = 0f
       damageShake = math.max(damageShake, 0.2f)
     } else {
-      // Build combo
       comboTime += dt
       if (comboTime >= 10f && comboMultiplier < 2f) {
         comboMultiplier = 2f
@@ -198,7 +187,6 @@ object GameState {
       }
     }
     
-    // Screen shake
     if (damageShake > 0) {
       val rng = new scala.util.Random()
       val shakeX = (rng.nextFloat() - 0.5f) * damageShake
@@ -209,7 +197,6 @@ object GameState {
       damageShake -= dt * 2f
     }
     
-    // Death
     if (health <= 0f) {
       health = 0f
       isAlive = false

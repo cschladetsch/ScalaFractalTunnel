@@ -37,21 +37,21 @@ object RayMarcher {
   }
   
   def sceneSDF(p: Vec3): (Float, Int) = {
-    val t = System.currentTimeMillis() * 0.001f
-    
     val center = getTunnelCenter(p.z)
     val dx = p.x - center.x
     val dy = p.y - center.y
     val r = math.sqrt(dx*dx + dy*dy).toFloat
     val angle = math.atan2(dy, dx).toFloat
     
+    // Varying radius with depth
     val radiusWave1 = math.sin(p.z * 0.18f).toFloat * 1.5f
     val radiusWave2 = math.sin(p.z * 0.09f).toFloat * 2f
     val narrowSection = math.sin(p.z * 0.05f).toFloat * 2.5f
     
     val baseRadius = 7f + radiusWave1 + radiusWave2 + narrowSection
     
-    val freq1 = math.sin(angle * 8f + p.z * 0.6f + t * 0.3f).toFloat * 1.0f
+    // MULTI-SCALE FRACTAL RIPPLES - 5 octaves
+    val freq1 = math.sin(angle * 8f + p.z * 0.6f).toFloat * 1.0f
     val freq2 = math.sin(angle * 16f - p.z * 1.2f).toFloat * 0.5f
     val freq3 = math.cos(angle * 32f + p.z * 2.4f).toFloat * 0.25f
     val freq4 = math.sin(angle * 64f + p.z * 4.8f).toFloat * 0.125f
