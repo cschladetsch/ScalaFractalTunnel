@@ -35,6 +35,7 @@ object GameState {
   var newRecord = false
   var countdownTime = Config.countdownTime
   var gameStarted = false
+  var showTitleScreen = true
   
   var damageShake = 0f
   
@@ -56,6 +57,7 @@ object GameState {
     newRecord = false
     countdownTime = Config.countdownTime
     gameStarted = false
+    showTitleScreen = false
     damageShake = 0f
     ParticleSystem.clear()
     
@@ -130,6 +132,7 @@ object GameState {
       checkpointReached = true
       checkpointMessage = s"CHECKPOINT ${checkpoint}m! +${Config.checkpointHealthBonus.toInt} HP"
       ParticleSystem.spawn(playerPos, Config.particleCounts("checkpoint"), (0, 255, 0))
+      AudioSystem.onCheckpoint()
     }
     
     if (perfectSectionActive && distance - perfectSectionStart >= Config.perfectSectionDistance) {
@@ -138,6 +141,7 @@ object GameState {
       checkpointReached = true
       checkpointMessage = "PERFECT SECTION! Multiplier increased!"
       ParticleSystem.spawn(playerPos, Config.particleCounts("perfectSection"), (255, 255, 0))
+      AudioSystem.onCombo()
     }
     
     pickups = pickups.map { pickup =>
@@ -155,6 +159,7 @@ object GameState {
             slowTimeEndTime = System.currentTimeMillis() + Config.slowTimeDuration
             ParticleSystem.spawn(pickup.position, Config.particleCounts("slowTimePickup"), (255, 255, 0))
         }
+        AudioSystem.onPickup()
         pickup.copy(collected = true)
       } else pickup
     }
@@ -166,6 +171,7 @@ object GameState {
         perfectSectionActive = false
         comboMultiplier = 1f
         ParticleSystem.spawn(playerPos, Config.particleCounts("damage"), (255, 0, 0))
+        AudioSystem.onDamage()
       }
     }
     
@@ -178,11 +184,18 @@ object GameState {
       comboMultiplier = 1f
       comboTime = 0f
       damageShake = math.max(damageShake, Config.shakeIntensity * 0.4f)
+      
+      val timeSinceDamage = System.currentTimeMillis() - lastDamageTime
+      if (timeSinceDamage > 200) {
+        AudioSystem.onDamage()
+        lastDamageTime = System.currentTimeMillis()
+      }
     } else {
       comboTime += dt
       if (comboTime >= Config.comboTimeThreshold && comboMultiplier < 2f) {
         comboMultiplier = 2f
         ParticleSystem.spawn(playerPos, Config.particleCounts("combo"), (255, 200, 0))
+        AudioSystem.onCombo()
       }
     }
     

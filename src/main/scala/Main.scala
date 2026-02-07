@@ -13,15 +13,86 @@ object Main {
   
   def main(args: Array[String]): Unit = {
     AudioSystem.init()
-    GameState.reset()
     
-    val frame = new JFrame("Fractal Tunnel - ULTIMATE")
+    val frame = new JFrame("Fractal Tunnel")
     val panel = new JPanel() {
       override def paintComponent(g: Graphics): Unit = {
         val now = System.nanoTime()
         val dt = math.min((now - lastTime) / 1e9f, 0.1f)
         lastTime = now
         
+        // TITLE SCREEN
+        if (GameState.showTitleScreen) {
+          g.setColor(Color.BLACK)
+          g.fillRect(0, 0, Config.displayWidth, Config.displayHeight)
+          
+          // Animated background effect
+          val t = System.currentTimeMillis() * 0.001f
+          for (i <- 0 until 20) {
+            val x = ((math.sin(t * 0.3 + i) * 0.5 + 0.5) * Config.displayWidth).toInt
+            val y = ((math.cos(t * 0.4 + i * 0.5) * 0.5 + 0.5) * Config.displayHeight).toInt
+            val size = (math.sin(t + i) * 20 + 30).toInt
+            val alpha = (math.sin(t * 2 + i) * 100 + 100).toInt
+            g.setColor(new Color(100, 50, 150, alpha))
+            g.fillOval(x - size/2, y - size/2, size, size)
+          }
+          
+          // Title
+          g.setColor(Color.WHITE)
+          g.setFont(new Font("Monospaced", Font.BOLD, 56))
+          g.drawString("FRACTAL", Config.displayWidth / 2 - 140, 120)
+          g.drawString("TUNNEL", Config.displayWidth / 2 - 120, 180)
+          
+          // Subtitle
+          g.setFont(new Font("Monospaced", Font.PLAIN, 18))
+          g.setColor(new Color(150, 150, 255))
+          g.drawString("Ray-Marched Endless Runner", Config.displayWidth / 2 - 140, 210)
+          
+          // Controls
+          g.setColor(Color.WHITE)
+          g.setFont(new Font("Monospaced", Font.BOLD, 16))
+          g.drawString("CONTROLS", Config.displayWidth / 2 - 50, 270)
+          
+          g.setFont(new Font("Monospaced", Font.PLAIN, 14))
+          g.drawString("W/A/S/D  -  Move", Config.displayWidth / 2 - 90, 300)
+          g.drawString("Arrows   -  Look", Config.displayWidth / 2 - 90, 320)
+          g.drawString("Q/E      -  Roll", Config.displayWidth / 2 - 90, 340)
+          g.drawString("SPACE    -  Recenter", Config.displayWidth / 2 - 90, 360)
+          
+          // Pickups legend
+          g.setFont(new Font("Monospaced", Font.BOLD, 14))
+          g.setColor(new Color(0, 255, 0))
+          g.drawString("●", Config.displayWidth / 2 - 100, 400)
+          g.setColor(Color.WHITE)
+          g.drawString("Health", Config.displayWidth / 2 - 80, 400)
+          
+          g.setColor(new Color(50, 150, 255))
+          g.drawString("●", Config.displayWidth / 2 - 100, 420)
+          g.setColor(Color.WHITE)
+          g.drawString("Shield", Config.displayWidth / 2 - 80, 420)
+          
+          g.setColor(new Color(255, 255, 50))
+          g.drawString("●", Config.displayWidth / 2 - 100, 440)
+          g.setColor(Color.WHITE)
+          g.drawString("Slow Time", Config.displayWidth / 2 - 80, 440)
+          
+          // Start prompt (pulsing)
+          val pulse = (math.sin(t * 3) * 0.3 + 0.7).toFloat
+          g.setColor(new Color(255, 255, 100, (pulse * 255).toInt))
+          g.setFont(new Font("Monospaced", Font.BOLD, 24))
+          g.drawString("PRESS SPACE TO START", Config.displayWidth / 2 - 140, Config.displayHeight - 60)
+          
+          // Check for space press
+          if (inputHandler.keys.contains(java.awt.event.KeyEvent.VK_SPACE)) {
+            GameState.reset()
+            camera = Camera.default
+          }
+          
+          SwingUtilities.invokeLater(() => repaint())
+          return
+        }
+        
+        // GAME LOGIC
         if (GameState.isAlive) {
           if (!GameState.gameStarted) {
             g.setColor(Color.BLACK)
@@ -126,6 +197,7 @@ object Main {
           }
           
         } else {
+          // Game Over
           g.setColor(new Color(20, 0, 0))
           g.fillRect(0, 0, Config.displayWidth, Config.displayHeight)
           
@@ -159,7 +231,7 @@ object Main {
           g.drawString("Press R to restart", Config.displayWidth / 2 - 100, Config.displayHeight - 30)
           
           if (inputHandler.keys.contains(java.awt.event.KeyEvent.VK_R)) {
-            GameState.reset()
+            GameState.showTitleScreen = true
             camera = Camera.default
             messageTime = 0L
             message = ""
