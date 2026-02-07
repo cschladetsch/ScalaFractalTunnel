@@ -13,12 +13,12 @@ object ParticleSystem {
     val rng = new scala.util.Random()
     for (_ <- 0 until count) {
       val angle = rng.nextFloat() * math.Pi.toFloat * 2f
-      val speed = rng.nextFloat() * 5f + 2f
+      val speed = rng.nextFloat() * (Config.particleMaxSpeed - Config.particleMinSpeed) + Config.particleMinSpeed
       val vx = math.cos(angle).toFloat * speed
       val vy = math.sin(angle).toFloat * speed
       val vz = (rng.nextFloat() - 0.5f) * 3f
       
-      particles = Particle(pos, Vec3(vx, vy, vz), 1f, 1f, color) :: particles
+      particles = Particle(pos, Vec3(vx, vy, vz), Config.particleLifetime, Config.particleLifetime, color) :: particles
     }
   }
   

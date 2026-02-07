@@ -1,10 +1,6 @@
 case class Hit(point: Vec3, distance: Float, steps: Int, materialId: Int)
 
 object RayMarcher {
-  val EPSILON = 0.01f
-  val MAX_DIST = 60f
-  val MAX_STEPS = 55
-  
   val MAT_TUNNEL = 0
   val MAT_HEALTH_PICKUP = 1
   val MAT_SHIELD_PICKUP = 2
@@ -12,18 +8,18 @@ object RayMarcher {
   val MAT_OBSTACLE = 4
   
   def march(origin: Vec3, direction: Vec3): Option[Hit] = {
-    var t = 0.1f
+    var t = Config.startOffset
     var steps = 0
     
-    while (t < MAX_DIST && steps < MAX_STEPS) {
+    while (t < Config.maxDistance && steps < Config.maxSteps) {
       val p = origin + direction * t
       val (d, mat) = sceneSDF(p)
       
-      if (d < EPSILON) {
+      if (d < Config.epsilon) {
         return Some(Hit(p, t, steps, mat))
       }
       
-      t += d
+      t += d * Config.stepMultiplier
       steps += 1
     }
     
@@ -31,8 +27,8 @@ object RayMarcher {
   }
   
   def getTunnelCenter(z: Float): Vec3 = {
-    val x = math.sin(z * 0.15f).toFloat * 6f
-    val y = math.cos(z * 0.12f).toFloat * 5f
+    val x = math.sin(z * Config.curveFreqX).toFloat * Config.curveAmpX
+    val y = math.cos(z * Config.curveFreqY).toFloat * Config.curveAmpY
     Vec3(x, y, z)
   }
   
@@ -43,21 +39,26 @@ object RayMarcher {
     val r = math.sqrt(dx*dx + dy*dy).toFloat
     val angle = math.atan2(dy, dx).toFloat
     
-    // Varying radius with depth
-    val radiusWave1 = math.sin(p.z * 0.18f).toFloat * 1.5f
-    val radiusWave2 = math.sin(p.z * 0.09f).toFloat * 2f
-    val narrowSection = math.sin(p.z * 0.05f).toFloat * 2.5f
+    val radiusWave1 = math.sin(p.z * Config.radiusWave1Freq).toFloat * Config.radiusWave1Amp
+    val radiusWave2 = math.sin(p.z * Config.radiusWave2Freq).toFloat * Config.radiusWave2Amp
+    val radiusWave3 = math.sin(p.z * Config.radiusWave3Freq).toFloat * Config.radiusWave3Amp
     
-    val baseRadius = 7f + radiusWave1 + radiusWave2 + narrowSection
+    val baseRadius = Config.baseRadius + radiusWave1 + radiusWave2 + radiusWave3
     
-    // MULTI-SCALE FRACTAL RIPPLES - 5 octaves
-    val freq1 = math.sin(angle * 8f + p.z * 0.6f).toFloat * 1.0f
-    val freq2 = math.sin(angle * 16f - p.z * 1.2f).toFloat * 0.5f
-    val freq3 = math.cos(angle * 32f + p.z * 2.4f).toFloat * 0.25f
-    val freq4 = math.sin(angle * 64f + p.z * 4.8f).toFloat * 0.125f
-    val freq5 = math.cos(angle * 128f - p.z * 9.6f).toFloat * 0.0625f
-    
-    val fractal = freq1 + freq2 + freq3 + freq4 + freq5
+    // Multi-scale fractal displacement
+    var fractal = 0f
+    for (i <- 0 until 5) {
+      val freq = Config.fractalFreqs(i)
+      val amp = Config.fractalAmps(i)
+      val phaseZ = Config.fractalPhasesZ(i)
+      val sign = if (i % 2 == 0) 1f else -1f
+      
+      if (i % 2 == 0) {
+        fractal += math.sin(angle * freq + p.z * phaseZ * sign).toFloat * amp
+      } else {
+        fractal += math.cos(angle * freq + p.z * phaseZ * sign).toFloat * amp
+      }
+    }
     
     val tunnel = baseRadius + fractal - r
     
@@ -93,7 +94,7 @@ object RayMarcher {
   }
   
   def getNormal(p: Vec3): Vec3 = {
-    val e = 0.01f
+    val e = Config.epsilon
     Vec3(
       sceneSDF(p + Vec3(e, 0, 0))._1 - sceneSDF(p - Vec3(e, 0, 0))._1,
       sceneSDF(p + Vec3(0, e, 0))._1 - sceneSDF(p - Vec3(0, e, 0))._1,

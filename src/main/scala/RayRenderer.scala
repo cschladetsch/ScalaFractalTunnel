@@ -4,19 +4,18 @@ import java.awt.Color
 object RayRenderer {
   def render(width: Int, height: Int, camera: Camera): BufferedImage = {
     val img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-    val fov = 90f
     
-    val speedFactor = math.min((GameState.currentSpeed - 3f) / 15f, 1f)
+    val speedFactor = math.min((GameState.currentSpeed - Config.startSpeed) / (Config.maxSpeed - Config.startSpeed), 1f)
     
     for {
       y <- 0 until height
       x <- 0 until width
     } {
-      val rayDir = camera.getRayDirection(x, y, width, height, fov)
+      val rayDir = camera.getRayDirection(x, y, width, height, Config.fov)
       
       val color = RayMarcher.march(camera.position, rayDir) match {
         case Some(hit) =>
-          val phase = hit.point.z * 0.2f
+          val phase = hit.point.z * Config.colorPhaseMultiplier
           
           hit.materialId match {
             case RayMarcher.MAT_TUNNEL =>
@@ -26,28 +25,64 @@ object RayRenderer {
               new Color(r max 0 min 255, g max 50 min 255, b max 50 min 255)
               
             case RayMarcher.MAT_HEALTH_PICKUP =>
+              val normal = RayMarcher.getNormal(hit.point)
+              val lightDir = Vec3(0.3f, -0.5f, -0.8f).normalized
+              val diffuse = math.max(0.3f, normal.dot(lightDir))
+              
               val t = System.currentTimeMillis() * 0.003f
-              val pulse = (math.sin(t).toFloat * 0.3f + 1f)
-              val brightness = (200 * pulse).toInt min 255
-              new Color(50, brightness, 50)
+              val pulse = (math.sin(t).toFloat * 0.2f + 1f)
+              val baseG = (180 * pulse).toInt min 255
+              
+              new Color(
+                (30 * diffuse).toInt min 255,
+                (baseG * diffuse).toInt min 255,
+                (30 * diffuse).toInt min 255
+              )
               
             case RayMarcher.MAT_SHIELD_PICKUP =>
+              val normal = RayMarcher.getNormal(hit.point)
+              val lightDir = Vec3(0.3f, -0.5f, -0.8f).normalized
+              val diffuse = math.max(0.3f, normal.dot(lightDir))
+              
               val t = System.currentTimeMillis() * 0.003f
-              val pulse = (math.sin(t).toFloat * 0.3f + 1f)
-              val brightness = (150 * pulse).toInt min 255
-              new Color(50, brightness, 255)
+              val pulse = (math.sin(t).toFloat * 0.2f + 1f)
+              val baseB = (220 * pulse).toInt min 255
+              
+              new Color(
+                (40 * diffuse).toInt min 255,
+                (120 * diffuse).toInt min 255,
+                (baseB * diffuse).toInt min 255
+              )
               
             case RayMarcher.MAT_SLOWTIME_PICKUP =>
+              val normal = RayMarcher.getNormal(hit.point)
+              val lightDir = Vec3(0.3f, -0.5f, -0.8f).normalized
+              val diffuse = math.max(0.3f, normal.dot(lightDir))
+              
               val t = System.currentTimeMillis() * 0.003f
-              val pulse = (math.sin(t).toFloat * 0.3f + 1f)
-              val brightness = (255 * pulse).toInt min 255
-              new Color(255, brightness, 50)
+              val pulse = (math.sin(t).toFloat * 0.2f + 1f)
+              val baseY = (220 * pulse).toInt min 255
+              
+              new Color(
+                (baseY * diffuse).toInt min 255,
+                (baseY * diffuse).toInt min 255,
+                (40 * diffuse).toInt min 255
+              )
               
             case RayMarcher.MAT_OBSTACLE =>
+              val normal = RayMarcher.getNormal(hit.point)
+              val lightDir = Vec3(0.3f, -0.5f, -0.8f).normalized
+              val diffuse = math.max(0.4f, normal.dot(lightDir))
+              
               val t = System.currentTimeMillis() * 0.005f
-              val pulse = (math.sin(t).toFloat * 0.4f + 0.8f)
-              val brightness = (200 * pulse).toInt min 255
-              new Color(brightness, 0, 0)
+              val pulse = (math.sin(t).toFloat * 0.3f + 1f)
+              val baseR = (200 * pulse).toInt min 255
+              
+              new Color(
+                (baseR * diffuse).toInt min 255,
+                0,
+                0
+              )
               
             case _ =>
               new Color(180, 180, 180)

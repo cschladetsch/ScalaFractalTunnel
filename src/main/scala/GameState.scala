@@ -10,11 +10,11 @@ case class Pickup(position: Vec3, pickupType: PickupType, collected: Boolean)
 case class Obstacle(position: Vec3)
 
 object GameState {
-  var health = 100f
+  var health = Config.startHealth
   var distance = 0f
   var isAlive = true
-  var baseSpeed = 3f
-  var currentSpeed = 3f
+  var baseSpeed = Config.startSpeed
+  var currentSpeed = Config.startSpeed
   var lastCheckpoint = 0
   var pickups = List[Pickup]()
   var obstacles = List[Obstacle]()
@@ -33,17 +33,17 @@ object GameState {
   
   var bestDistance = 0f
   var newRecord = false
-  var countdownTime = 3f
+  var countdownTime = Config.countdownTime
   var gameStarted = false
   
   var damageShake = 0f
   
   def reset(): Unit = {
-    health = 100f
+    health = Config.startHealth
     distance = 0f
     isAlive = true
-    baseSpeed = 3f
-    currentSpeed = 3f
+    baseSpeed = Config.startSpeed
+    currentSpeed = Config.startSpeed
     lastCheckpoint = 0
     pickups = List()
     obstacles = List()
@@ -54,7 +54,7 @@ object GameState {
     perfectSectionStart = 0f
     perfectSectionActive = true
     newRecord = false
-    countdownTime = 3f
+    countdownTime = Config.countdownTime
     gameStarted = false
     damageShake = 0f
     ParticleSystem.clear()
@@ -69,7 +69,7 @@ object GameState {
     obstacles = List()
     val rng = new scala.util.Random(12345)
     
-    for (z <- 20 to 800 by 25) {
+    for (z <- Config.spawnStartDistance to Config.spawnEndDistance by Config.spawnInterval) {
       val center = RayMarcher.getTunnelCenter(z.toFloat)
       val angle = rng.nextFloat() * math.Pi.toFloat * 2f
       val radius = rng.nextFloat() * 3f + 2f
@@ -78,14 +78,14 @@ object GameState {
       val y = center.y + radius * math.sin(angle).toFloat
       
       val pickupType = rng.nextFloat() match {
-        case f if f < 0.6f => HealthPickup
-        case f if f < 0.8f => ShieldPickup
+        case f if f < Config.healthSpawnChance => HealthPickup
+        case f if f < Config.shieldSpawnChance => ShieldPickup
         case _ => SlowTimePickup
       }
       
       pickups = Pickup(Vec3(x, y, z.toFloat), pickupType, false) :: pickups
       
-      if (z > 50 && rng.nextFloat() < 0.3f) {
+      if (z > Config.obstacleStartDistance && rng.nextFloat() < Config.obstacleSpawnChance) {
         val oAngle = rng.nextFloat() * math.Pi.toFloat * 2f
         val oRadius = rng.nextFloat() * 4f + 1f
         val ox = center.x + oRadius * math.cos(oAngle).toFloat
@@ -108,14 +108,13 @@ object GameState {
     
     distance = playerPos.z
     
-    // SLOWER speed increase: 0.01 instead of 0.02 (half the acceleration rate)
-    baseSpeed = math.min(3f + distance * 0.01f, 18f)
+    baseSpeed = math.min(Config.startSpeed + distance * Config.speedAcceleration, Config.maxSpeed)
     
     val timeMultiplier = if (slowTimeActive) {
       if (System.currentTimeMillis() > slowTimeEndTime) {
         slowTimeActive = false
         1f
-      } else 0.5f
+      } else Config.slowTimeMultiplier
     } else 1f
     
     currentSpeed = baseSpeed * timeMultiplier
@@ -124,66 +123,66 @@ object GameState {
       shieldActive = false
     }
     
-    val checkpoint = (distance / 100).toInt * 100
+    val checkpoint = (distance / Config.checkpointInterval).toInt * Config.checkpointInterval
     if (checkpoint > lastCheckpoint && checkpoint > 0) {
       lastCheckpoint = checkpoint
-      health = math.min(100f, health + 20f)
+      health = math.min(Config.startHealth, health + Config.checkpointHealthBonus)
       checkpointReached = true
-      checkpointMessage = s"CHECKPOINT ${checkpoint}m! +20 HP"
-      ParticleSystem.spawn(playerPos, 30, (0, 255, 0))
+      checkpointMessage = s"CHECKPOINT ${checkpoint}m! +${Config.checkpointHealthBonus.toInt} HP"
+      ParticleSystem.spawn(playerPos, Config.particleCounts("checkpoint"), (0, 255, 0))
     }
     
-    if (perfectSectionActive && distance - perfectSectionStart >= 50f) {
+    if (perfectSectionActive && distance - perfectSectionStart >= Config.perfectSectionDistance) {
       perfectSectionStart = distance
-      comboMultiplier = math.min(comboMultiplier + 0.5f, 5f)
+      comboMultiplier = math.min(comboMultiplier + Config.comboMultiplierIncrement, Config.comboMultiplierMax)
       checkpointReached = true
       checkpointMessage = "PERFECT SECTION! Multiplier increased!"
-      ParticleSystem.spawn(playerPos, 20, (255, 255, 0))
+      ParticleSystem.spawn(playerPos, Config.particleCounts("perfectSection"), (255, 255, 0))
     }
     
     pickups = pickups.map { pickup =>
-      if (!pickup.collected && (playerPos - pickup.position).length < 1.5f) {
+      if (!pickup.collected && (playerPos - pickup.position).length < Config.collectionRadius) {
         pickup.pickupType match {
           case HealthPickup =>
-            health = math.min(100f, health + 25f)
-            ParticleSystem.spawn(pickup.position, 15, (0, 255, 0))
+            health = math.min(Config.startHealth, health + Config.healthRestore)
+            ParticleSystem.spawn(pickup.position, Config.particleCounts("healthPickup"), (0, 255, 0))
           case ShieldPickup =>
             shieldActive = true
-            shieldEndTime = System.currentTimeMillis() + 5000
-            ParticleSystem.spawn(pickup.position, 15, (0, 150, 255))
+            shieldEndTime = System.currentTimeMillis() + Config.shieldDuration
+            ParticleSystem.spawn(pickup.position, Config.particleCounts("shieldPickup"), (0, 150, 255))
           case SlowTimePickup =>
             slowTimeActive = true
-            slowTimeEndTime = System.currentTimeMillis() + 3000
-            ParticleSystem.spawn(pickup.position, 15, (255, 255, 0))
+            slowTimeEndTime = System.currentTimeMillis() + Config.slowTimeDuration
+            ParticleSystem.spawn(pickup.position, Config.particleCounts("slowTimePickup"), (255, 255, 0))
         }
         pickup.copy(collected = true)
       } else pickup
     }
     
-    for (obstacle <- obstacles if (playerPos - obstacle.position).length < 1.2f) {
+    for (obstacle <- obstacles if (playerPos - obstacle.position).length < Config.obstacleRadius) {
       if (!shieldActive) {
-        health -= 30f
-        damageShake = 0.5f
+        health -= Config.obstacleDamage
+        damageShake = Config.shakeIntensity
         perfectSectionActive = false
         comboMultiplier = 1f
-        ParticleSystem.spawn(playerPos, 20, (255, 0, 0))
+        ParticleSystem.spawn(playerPos, Config.particleCounts("damage"), (255, 0, 0))
       }
     }
     
     val (distToWall, _) = RayMarcher.sceneSDF(playerPos)
-    if (distToWall < 1.5f && !shieldActive) {
-      val damageRate = (1.5f - distToWall) * 15f
+    if (distToWall < Config.wallDamageDistance && !shieldActive) {
+      val damageRate = (Config.wallDamageDistance - distToWall) * Config.wallDamageRate
       health -= damageRate * dt
       lastDamageTime = System.currentTimeMillis()
       perfectSectionActive = false
       comboMultiplier = 1f
       comboTime = 0f
-      damageShake = math.max(damageShake, 0.2f)
+      damageShake = math.max(damageShake, Config.shakeIntensity * 0.4f)
     } else {
       comboTime += dt
-      if (comboTime >= 10f && comboMultiplier < 2f) {
+      if (comboTime >= Config.comboTimeThreshold && comboMultiplier < 2f) {
         comboMultiplier = 2f
-        ParticleSystem.spawn(playerPos, 10, (255, 200, 0))
+        ParticleSystem.spawn(playerPos, Config.particleCounts("combo"), (255, 200, 0))
       }
     }
     
@@ -194,7 +193,7 @@ object GameState {
       modifiedCamera = modifiedCamera.copy(
         position = modifiedCamera.position + Vec3(shakeX, shakeY, 0)
       )
-      damageShake -= dt * 2f
+      damageShake -= dt * Config.shakeDecayRate
     }
     
     if (health <= 0f) {
@@ -248,7 +247,7 @@ object GameState {
   }
   
   def getDistanceToNextCheckpoint(): Int = {
-    val nextCheckpoint = ((distance / 100).toInt + 1) * 100
+    val nextCheckpoint = ((distance / Config.checkpointInterval).toInt + 1) * Config.checkpointInterval
     (nextCheckpoint - distance).toInt
   }
 }

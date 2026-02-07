@@ -1,0 +1,102 @@
+{
+  "game": {
+    "startHealth": 100,
+    "startSpeed": 3.0,
+    "maxSpeed": 18.0,
+    "speedAcceleration": 0.009,
+    "countdownTime": 3.0,
+    "checkpointInterval": 100,
+    "checkpointHealthBonus": 20,
+    "perfectSectionDistance": 50,
+    "comboTimeThreshold": 10.0,
+    "comboMultiplierMax": 5.0,
+    "comboMultiplierIncrement": 0.5
+  },
+  "damage": {
+    "wallDamageRate": 15.0,
+    "wallDamageDistance": 1.5,
+    "obstacleDamage": 30.0,
+    "obstacleRadius": 1.2,
+    "shakeIntensity": 0.5,
+    "shakeDecayRate": 2.0
+  },
+  "pickups": {
+    "healthRestore": 25,
+    "shieldDuration": 5000,
+    "slowTimeDuration": 3000,
+    "slowTimeMultiplier": 0.5,
+    "collectionRadius": 1.5,
+    "spawnInterval": 25,
+    "spawnStartDistance": 20,
+    "spawnEndDistance": 800,
+    "healthSpawnChance": 0.6,
+    "shieldSpawnChance": 0.8,
+    "obstacleStartDistance": 50,
+    "obstacleSpawnChance": 0.3
+  },
+  "raymarching": {
+    "epsilon": 0.01,
+    "maxDistance": 60.0,
+    "maxSteps": 55,
+    "startOffset": 0.1,
+    "stepMultiplier": 1.0
+  },
+  "tunnel": {
+    "curveFrequencyX": 0.15,
+    "curveFrequencyY": 0.12,
+    "curveAmplitudeX": 6.0,
+    "curveAmplitudeY": 5.0,
+    "baseRadius": 7.0,
+    "radiusWave1Freq": 0.18,
+    "radiusWave1Amp": 1.5,
+    "radiusWave2Freq": 0.09,
+    "radiusWave2Amp": 2.0,
+    "radiusWave3Freq": 0.05,
+    "radiusWave3Amp": 2.5,
+    "fractalFreq1": 8,
+    "fractalFreq2": 16,
+    "fractalFreq3": 32,
+    "fractalFreq4": 64,
+    "fractalFreq5": 128,
+    "fractalAmp1": 1.0,
+    "fractalAmp2": 0.5,
+    "fractalAmp3": 0.25,
+    "fractalAmp4": 0.125,
+    "fractalAmp5": 0.0625,
+    "fractalPhase1Z": 0.6,
+    "fractalPhase2Z": 1.2,
+    "fractalPhase3Z": 2.4,
+    "fractalPhase4Z": 4.8,
+    "fractalPhase5Z": 9.6
+  },
+  "rendering": {
+    "renderWidth": 213,
+    "renderHeight": 160,
+    "displayWidth": 640,
+    "displayHeight": 480,
+    "fov": 90.0,
+    "colorPhaseMultiplier": 0.2,
+    "speedColorThreshold": 8.0,
+    "speedColorRange": 10.0
+  },
+  "movement": {
+    "strafeSpeed": 5.0,
+    "rotationSpeed": 1.5,
+    "collisionRadius": 0.6,
+    "slideMultiplier": 1.2,
+    "pushbackDistance": 0.1,
+    "recenterSpeed": 0.1
+  },
+  "particles": {
+    "checkpointCount": 30,
+    "perfectSectionCount": 20,
+    "healthPickupCount": 15,
+    "shieldPickupCount": 15,
+    "slowTimePickupCount": 15,
+    "damageCount": 20,
+    "comboCount": 10,
+    "lifetime": 1.0,
+    "minSpeed": 2.0,
+    "maxSpeed": 7.0
+  }
+}
