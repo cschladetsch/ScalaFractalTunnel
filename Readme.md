@@ -1,4 +1,4 @@
-# Fractal Tunnel Runner
+# Scala - Fractal Tunnel Runner
 
 An endless runner game through procedurally-generated fractal tunnels, built entirely with ray marching. Created as a technical demo showcasing real-time SDF (Signed Distance Field) rendering in Scala 3.
 
