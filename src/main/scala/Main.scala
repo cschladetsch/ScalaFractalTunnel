@@ -1,6 +1,5 @@
 import javax.swing._
 import java.awt._
-import java.awt.event.KeyEvent
 
 object Main {
   var camera = Camera.default
@@ -8,12 +7,12 @@ object Main {
   var lastTime = System.nanoTime()
   
   def main(args: Array[String]): Unit = {
-    val renderW = 320
-    val renderH = 240
+    val renderW = 213
+    val renderH = 160
     val displayW = 640
     val displayH = 480
     
-    val frame = new JFrame("Descent Clone - WASD/Space/Shift to move, Arrows/Q/E to rotate")
+    val frame = new JFrame("Descent Clone - WASD/R/F move, Arrows/Q/E rotate, SPACE fire")
     val panel = new JPanel() {
       override def paintComponent(g: Graphics): Unit = {
         val now = System.nanoTime()
@@ -21,13 +20,11 @@ object Main {
         lastTime = now
         
         camera = inputHandler.updateCamera(camera, dt)
+        ProjectileSystem.update(dt)
         
         val img = RayRenderer.render(renderW, renderH, camera)
-        
-        // Scale 2x for display - nearest neighbor for chunky pixels
         g.drawImage(img, 0, 0, displayW, displayH, null)
         
-        // Continuous repaint
         SwingUtilities.invokeLater(() => repaint())
       }
       

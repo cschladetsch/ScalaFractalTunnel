@@ -6,8 +6,9 @@ object RayMarcher {
   val MAX_STEPS = 100
   
   val MAT_TUNNEL = 0
-  val MAT_WALL = 1
-  val MAT_OBSTACLE = 2
+  val MAT_CRYSTAL = 1
+  val MAT_GLOW = 2
+  val MAT_PROJECTILE = 3
   
   def march(origin: Vec3, direction: Vec3): Option[Hit] = {
     var t = 0f
@@ -29,59 +30,72 @@ object RayMarcher {
   }
   
   def sceneSDF(p: Vec3): (Float, Int) = {
-    // Tunnel walls
-    val tunnelRadius = 8f
-    val radiusXY = math.sqrt(p.x*p.x + p.y*p.y).toFloat
+    // Twisted organic tunnel
+    val twist = math.sin(p.z * 0.1).toFloat * 0.3f
+    val pTwisted = Vec3(
+      p.x * math.cos(twist).toFloat - p.y * math.sin(twist).toFloat,
+      p.x * math.sin(twist).toFloat + p.y * math.cos(twist).toFloat,
+      p.z
+    )
+    
+    // Pulsating radius based on Z
+    val radiusVariation = 2f + math.sin(p.z * 0.3).toFloat * 1.5f
+    val tunnelRadius = 8f + radiusVariation
+    val radiusXY = math.sqrt(pTwisted.x*pTwisted.x + pTwisted.y*pTwisted.y).toFloat
     val tunnel = tunnelRadius - radiusXY
     
-    // Walls with doorways
-    val wallSpacing = 20f
-    val wallThickness = 0.5f
-    val segmentZ = (p.z / wallSpacing).floor * wallSpacing
-    val wallCenter = segmentZ + wallSpacing / 2
+    // Fractal crystal structures on walls
+    val crystalPattern = (
+      math.sin(p.x * 2f + p.z * 0.5f).toFloat * 
+      math.cos(p.y * 2f + p.z * 0.3f).toFloat * 
+      math.sin(p.z * 1.5f).toFloat
+    ) * 1.5f
     
-    val wall = boxSDF(p, Vec3(0, 0, wallCenter), Vec3(7, 7, wallThickness))
-    val doorway = boxSDF(p, Vec3(0, 0, wallCenter), Vec3(2, 2, wallThickness + 0.1f))
-    val wallWithDoor = subtraction(wall, doorway)
+    val crystalPos = Vec3(
+      (p.x % 10f) - 5f,
+      (p.y % 10f) - 5f,
+      p.z
+    )
+    val crystal = sphereSDF(crystalPos, Vec3(0, 0, 0), 1.5f) + crystalPattern
     
-    // Obstacles
-    val segmentId = (p.z / 10f).floor.toInt
-    val rng = new scala.util.Random(segmentId * 12345)
-    val obsX = (rng.nextFloat() - 0.5f) * 6f
-    val obsY = (rng.nextFloat() - 0.5f) * 6f
-    val obsZ = segmentId * 10f + 5f
-    val obstacle = boxSDF(p, Vec3(obsX, obsY, obsZ), Vec3(1, 1, 1))
+    // Glowing orbs floating in space
+    val orbZ = (p.z / 15f).floor * 15f
+    val seed = orbZ.toInt * 7919
+    val rng = new scala.util.Random(seed)
+    val orbX = (rng.nextFloat() - 0.5f) * 10f
+    val orbY = (rng.nextFloat() - 0.5f) * 10f
+    val orbRadius = 0.5f + rng.nextFloat() * 0.5f
+    val orb = sphereSDF(p, Vec3(orbX, orbY, orbZ + 7.5f), orbRadius)
     
-    // Find closest and return material
-    val dists = List((tunnel, MAT_TUNNEL), (wallWithDoor, MAT_WALL), (obstacle, MAT_OBSTACLE))
+    // Projectiles
+    val projectile = ProjectileSystem.projectileSDF(p)
+    
+    // Combine with smooth min for organic blending
+    val tunnelCrystal = smoothMin(tunnel, crystal, 0.8f)
+    
+    val dists = List(
+      (tunnelCrystal, MAT_TUNNEL),
+      (orb, MAT_GLOW),
+      (projectile, MAT_PROJECTILE)
+    )
     dists.minBy(_._1)
   }
   
-  def boxSDF(p: Vec3, center: Vec3, size: Vec3): Float = {
-    val q = Vec3(
-      math.abs(p.x - center.x) - size.x,
-      math.abs(p.y - center.y) - size.y,
-      math.abs(p.z - center.z) - size.z
-    )
-    
-    val outside = Vec3(
-      math.max(q.x, 0),
-      math.max(q.y, 0),
-      math.max(q.z, 0)
-    ).length
-    
-    val inside = math.min(math.max(q.x, math.max(q.y, q.z)), 0f)
-    
-    outside + inside
+  def sphereSDF(p: Vec3, center: Vec3, radius: Float): Float = {
+    (p - center).length - radius
+  }
+  
+  def smoothMin(a: Float, b: Float, k: Float): Float = {
+    val h = math.max(k - math.abs(a - b), 0f) / k
+    math.min(a, b).toFloat - h * h * k * 0.25f
   }
   
   def union(d1: Float, d2: Float): Float = math.min(d1, d2)
-  def subtraction(d1: Float, d2: Float): Float = math.max(d1, -d2)
   
   def getNormal(p: Vec3): Vec3 = {
     val e = 0.001f
     Vec3(
-      sceneSDF(p)._1 + e - sceneSDF(p - Vec3(e, 0, 0))._1,
+      sceneSDF(p + Vec3(e, 0, 0))._1 - sceneSDF(p - Vec3(e, 0, 0))._1,
       sceneSDF(p + Vec3(0, e, 0))._1 - sceneSDF(p - Vec3(0, e, 0))._1,
       sceneSDF(p + Vec3(0, 0, e))._1 - sceneSDF(p - Vec3(0, 0, e))._1
     ).normalized

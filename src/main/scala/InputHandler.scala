@@ -3,6 +3,7 @@ import scala.collection.mutable
 
 class InputHandler extends KeyAdapter {
   private val keys = mutable.Set[Int]()
+  private var lastFireTime = 0L
   
   override def keyPressed(e: KeyEvent): Unit = {
     keys += e.getKeyCode
@@ -23,13 +24,15 @@ class InputHandler extends KeyAdapter {
     var yaw = camera.yaw
     var roll = camera.roll
     
-    // Movement
-    if (isPressed(KeyEvent.VK_W)) pos = pos + camera.forward * moveSpeed
-    if (isPressed(KeyEvent.VK_S)) pos = pos - camera.forward * moveSpeed
-    if (isPressed(KeyEvent.VK_A)) pos = pos - camera.right * moveSpeed
-    if (isPressed(KeyEvent.VK_D)) pos = pos + camera.right * moveSpeed
-    if (isPressed(KeyEvent.VK_SPACE)) pos = pos + camera.up * moveSpeed
-    if (isPressed(KeyEvent.VK_SHIFT)) pos = pos - camera.up * moveSpeed
+    var newPos = pos
+    
+    // Movement in local frame
+    if (isPressed(KeyEvent.VK_W)) newPos = tryMove(newPos, camera.forward * moveSpeed)
+    if (isPressed(KeyEvent.VK_S)) newPos = tryMove(newPos, camera.forward * -moveSpeed)
+    if (isPressed(KeyEvent.VK_A)) newPos = tryMove(newPos, camera.right * -moveSpeed)
+    if (isPressed(KeyEvent.VK_D)) newPos = tryMove(newPos, camera.right * moveSpeed)
+    if (isPressed(KeyEvent.VK_R)) newPos = tryMove(newPos, camera.up * moveSpeed)      // Up in local frame
+    if (isPressed(KeyEvent.VK_F)) newPos = tryMove(newPos, camera.up * -moveSpeed)     // Down in local frame
     
     // Rotation
     if (isPressed(KeyEvent.VK_UP)) pitch -= rotSpeed
@@ -39,6 +42,28 @@ class InputHandler extends KeyAdapter {
     if (isPressed(KeyEvent.VK_Q)) roll -= rotSpeed
     if (isPressed(KeyEvent.VK_E)) roll += rotSpeed
     
-    Camera(pos, pitch, yaw, roll)
+    // Fire projectile (rate limited)
+    if (isPressed(KeyEvent.VK_SPACE)) {
+      val now = System.currentTimeMillis()
+      if (now - lastFireTime > 250) {  // 250ms cooldown
+        ProjectileSystem.fire(newPos, camera.forward)
+        lastFireTime = now
+      }
+    }
+    
+    Camera(newPos, pitch, yaw, roll)
+  }
+  
+  private def tryMove(currentPos: Vec3, delta: Vec3): Vec3 = {
+    val newPos = currentPos + delta
+    val collisionRadius = 0.15f
+    
+    val dist = RayMarcher.sceneSDF(newPos)._1
+    
+    if (dist > collisionRadius) {
+      newPos
+    } else {
+      currentPos
+    }
   }
 }
