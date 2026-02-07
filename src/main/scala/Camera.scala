@@ -42,5 +42,5 @@ case class Camera(
 }
 
 object Camera {
-  def default: Camera = Camera(Vec3(0, 0, 0), 0f, 0f, 0f)  // Start in tunnel
+  def default: Camera = Camera(Vec3(0, 0, 0), 0f, 0f, 0f)
 }

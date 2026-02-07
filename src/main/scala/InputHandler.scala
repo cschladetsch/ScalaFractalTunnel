@@ -1,69 +1,63 @@
-import java.awt.event.{KeyAdapter, KeyEvent}
-import scala.collection.mutable
+import java.awt.event.{KeyEvent, KeyListener}
 
-class InputHandler extends KeyAdapter {
-  private val keys = mutable.Set[Int]()
-  private var lastFireTime = 0L
+class InputHandler extends KeyListener {
+  private var keys = Set[Int]()
+  private var lastShotTime = 0L
+  private val shotCooldown = 250L
+  
+  val baseSpeed = 15f
+  val strafeSpeed = 8f
   
   override def keyPressed(e: KeyEvent): Unit = {
-    keys += e.getKeyCode
+    keys = keys + e.getKeyCode
   }
   
   override def keyReleased(e: KeyEvent): Unit = {
-    keys -= e.getKeyCode
+    keys = keys - e.getKeyCode
   }
   
-  def isPressed(keyCode: Int): Boolean = keys.contains(keyCode)
+  override def keyTyped(e: KeyEvent): Unit = {}
   
   def updateCamera(camera: Camera, dt: Float): Camera = {
-    val moveSpeed = 5f * dt
-    val rotSpeed = 1.5f * dt
+    var newCamera = camera
     
-    var pos = camera.position
-    var pitch = camera.pitch
-    var yaw = camera.yaw
-    var roll = camera.roll
+    // SPACE = recenter
+    if (keys.contains(KeyEvent.VK_SPACE)) {
+      val tunnelCenter = RayMarcher.getTunnelCenter(camera.position.z)
+      newCamera = newCamera.copy(position = tunnelCenter)
+    }
     
-    var newPos = pos
+    // Auto forward
+    val forwardMove = camera.forward * baseSpeed * dt
+    val newPosForward = newCamera.position + forwardMove
     
-    // Movement in local frame
-    if (isPressed(KeyEvent.VK_W)) newPos = tryMove(newPos, camera.forward * moveSpeed)
-    if (isPressed(KeyEvent.VK_S)) newPos = tryMove(newPos, camera.forward * -moveSpeed)
-    if (isPressed(KeyEvent.VK_A)) newPos = tryMove(newPos, camera.right * -moveSpeed)
-    if (isPressed(KeyEvent.VK_D)) newPos = tryMove(newPos, camera.right * moveSpeed)
-    if (isPressed(KeyEvent.VK_R)) newPos = tryMove(newPos, camera.up * moveSpeed)      // Up in local frame
-    if (isPressed(KeyEvent.VK_F)) newPos = tryMove(newPos, camera.up * -moveSpeed)     // Down in local frame
+    // Steering
+    var strafeMove = Vec3(0, 0, 0)
+    if (keys.contains(KeyEvent.VK_A)) strafeMove = strafeMove - camera.right * strafeSpeed * dt
+    if (keys.contains(KeyEvent.VK_D)) strafeMove = strafeMove + camera.right * strafeSpeed * dt
+    if (keys.contains(KeyEvent.VK_W)) strafeMove = strafeMove + camera.forward * strafeSpeed * dt
+    if (keys.contains(KeyEvent.VK_S)) strafeMove = strafeMove - camera.forward * (strafeSpeed * 0.5f) * dt
+    if (keys.contains(KeyEvent.VK_R)) strafeMove = strafeMove + camera.up * strafeSpeed * dt
+    if (keys.contains(KeyEvent.VK_F)) strafeMove = strafeMove - camera.up * strafeSpeed * dt
+    
+    val newPos = tryMove(newPosForward + strafeMove, newCamera.position)
+    newCamera = newCamera.copy(position = newPos)
     
     // Rotation
-    if (isPressed(KeyEvent.VK_UP)) pitch -= rotSpeed
-    if (isPressed(KeyEvent.VK_DOWN)) pitch += rotSpeed
-    if (isPressed(KeyEvent.VK_LEFT)) yaw -= rotSpeed
-    if (isPressed(KeyEvent.VK_RIGHT)) yaw += rotSpeed
-    if (isPressed(KeyEvent.VK_Q)) roll -= rotSpeed
-    if (isPressed(KeyEvent.VK_E)) roll += rotSpeed
+    val rotSpeed = 1.5f * dt
+    if (keys.contains(KeyEvent.VK_UP)) newCamera = newCamera.copy(pitch = newCamera.pitch + rotSpeed)
+    if (keys.contains(KeyEvent.VK_DOWN)) newCamera = newCamera.copy(pitch = newCamera.pitch - rotSpeed)
+    if (keys.contains(KeyEvent.VK_LEFT)) newCamera = newCamera.copy(yaw = newCamera.yaw + rotSpeed)
+    if (keys.contains(KeyEvent.VK_RIGHT)) newCamera = newCamera.copy(yaw = newCamera.yaw - rotSpeed)
+    if (keys.contains(KeyEvent.VK_Q)) newCamera = newCamera.copy(roll = newCamera.roll + rotSpeed)
+    if (keys.contains(KeyEvent.VK_E)) newCamera = newCamera.copy(roll = newCamera.roll - rotSpeed)
     
-    // Fire projectile (rate limited)
-    if (isPressed(KeyEvent.VK_SPACE)) {
-      val now = System.currentTimeMillis()
-      if (now - lastFireTime > 250) {  // 250ms cooldown
-        ProjectileSystem.fire(newPos, camera.forward)
-        lastFireTime = now
-      }
-    }
-    
-    Camera(newPos, pitch, yaw, roll)
+    newCamera
   }
   
-  private def tryMove(currentPos: Vec3, delta: Vec3): Vec3 = {
-    val newPos = currentPos + delta
-    val collisionRadius = 0.15f
-    
-    val dist = RayMarcher.sceneSDF(newPos)._1
-    
-    if (dist > collisionRadius) {
-      newPos
-    } else {
-      currentPos
-    }
+  def tryMove(newPos: Vec3, oldPos: Vec3): Vec3 = {
+    val collisionRadius = 0.5f
+    val (dist, _) = RayMarcher.sceneSDF(newPos)
+    if (dist > collisionRadius) newPos else oldPos
   }
 }
