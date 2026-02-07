@@ -5,8 +5,8 @@ class InputHandler extends KeyListener {
   private var lastShotTime = 0L
   private val shotCooldown = 250L
   
-  val baseSpeed = 15f
-  val strafeSpeed = 8f
+  val baseSpeed = 8f  // Reduced from 15f
+  val strafeSpeed = 5f  // Reduced from 8f
   
   override def keyPressed(e: KeyEvent): Unit = {
     keys = keys + e.getKeyCode
@@ -24,12 +24,12 @@ class InputHandler extends KeyListener {
     // SPACE = recenter
     if (keys.contains(KeyEvent.VK_SPACE)) {
       val tunnelCenter = RayMarcher.getTunnelCenter(camera.position.z)
-      newCamera = newCamera.copy(position = tunnelCenter)
+      val toCenter = (tunnelCenter - camera.position) * 0.1f
+      newCamera = newCamera.copy(position = camera.position + toCenter)
     }
     
     // Auto forward
     val forwardMove = camera.forward * baseSpeed * dt
-    val newPosForward = newCamera.position + forwardMove
     
     // Steering
     var strafeMove = Vec3(0, 0, 0)
@@ -40,8 +40,11 @@ class InputHandler extends KeyListener {
     if (keys.contains(KeyEvent.VK_R)) strafeMove = strafeMove + camera.up * strafeSpeed * dt
     if (keys.contains(KeyEvent.VK_F)) strafeMove = strafeMove - camera.up * strafeSpeed * dt
     
-    val newPos = tryMove(newPosForward + strafeMove, newCamera.position)
-    newCamera = newCamera.copy(position = newPos)
+    // Try forward + strafe separately for better collision handling
+    val testForward = tryMoveWithSlide(newCamera.position + forwardMove, newCamera.position)
+    val finalPos = tryMoveWithSlide(testForward + strafeMove, testForward)
+    
+    newCamera = newCamera.copy(position = finalPos)
     
     // Rotation
     val rotSpeed = 1.5f * dt
@@ -55,9 +58,29 @@ class InputHandler extends KeyListener {
     newCamera
   }
   
-  def tryMove(newPos: Vec3, oldPos: Vec3): Vec3 = {
-    val collisionRadius = 0.5f
+  def tryMoveWithSlide(newPos: Vec3, oldPos: Vec3): Vec3 = {
+    val collisionRadius = 0.6f  // Reduced from 0.8f for more room
     val (dist, _) = RayMarcher.sceneSDF(newPos)
-    if (dist > collisionRadius) newPos else oldPos
+    
+    if (dist > collisionRadius) {
+      // Free movement
+      newPos
+    } else if (dist > 0.1f) {
+      // Near wall - slide along surface
+      val normal = RayMarcher.getNormal(newPos)
+      val moveDir = (newPos - oldPos)
+      
+      // Remove component pointing into wall
+      val slideVec = moveDir - normal * moveDir.dot(normal) * 1.2f
+      val slidePos = oldPos + slideVec
+      
+      // Check if slide is safe
+      val (slideDist, _) = RayMarcher.sceneSDF(slidePos)
+      if (slideDist > 0.3f) slidePos else oldPos
+    } else {
+      // Too close to wall - push back
+      val normal = RayMarcher.getNormal(newPos)
+      oldPos + normal * 0.1f
+    }
   }
 }
