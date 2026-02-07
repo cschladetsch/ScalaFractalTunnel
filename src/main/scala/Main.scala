@@ -12,6 +12,8 @@ object Main {
     val displayW = 640
     val displayH = 480
     
+    AudioSystem.init()
+    
     val frame = new JFrame("Descent Clone - WASD/R/F move, Arrows/Q/E rotate, SPACE fire")
     val panel = new JPanel() {
       override def paintComponent(g: Graphics): Unit = {
@@ -21,6 +23,7 @@ object Main {
         
         camera = inputHandler.updateCamera(camera, dt)
         ProjectileSystem.update(dt)
+        AudioSystem.updatePosition(camera.position)
         
         val img = RayRenderer.render(renderW, renderH, camera)
         g.drawImage(img, 0, 0, displayW, displayH, null)
@@ -37,6 +40,11 @@ object Main {
     frame.add(panel)
     frame.pack()
     frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+    frame.addWindowListener(new java.awt.event.WindowAdapter() {
+      override def windowClosing(e: java.awt.event.WindowEvent): Unit = {
+        AudioSystem.stop()
+      }
+    })
     frame.setVisible(true)
     
     panel.requestFocusInWindow()
