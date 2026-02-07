@@ -8,6 +8,7 @@ object Main {
   var frameCount = 0
   var lastFpsTime = System.currentTimeMillis()
   var fps = 0
+  var checkpointMessageTime = 0L
   
   def main(args: Array[String]): Unit = {
     val renderW = 213
@@ -16,8 +17,9 @@ object Main {
     val displayH = 480
     
     AudioSystem.init()
+    GameState.reset()
     
-    val frame = new JFrame("Fractal Tunnel - Don't hit the walls!")
+    val frame = new JFrame("Fractal Tunnel - Survive!")
     val panel = new JPanel() {
       override def paintComponent(g: Graphics): Unit = {
         val now = System.nanoTime()
@@ -25,11 +27,16 @@ object Main {
         lastTime = now
         
         if (GameState.isAlive) {
-          // Game loop
+          val oldCheckpoint = GameState.lastCheckpoint
           camera = inputHandler.updateCamera(camera, dt)
           ProjectileSystem.update(dt)
           GameState.update(camera.position, dt)
           AudioSystem.updatePosition(camera.position)
+          
+          // Check if new checkpoint reached
+          if (GameState.lastCheckpoint > oldCheckpoint) {
+            checkpointMessageTime = System.currentTimeMillis()
+          }
           
           // Render
           val img = RayRenderer.render(renderW, renderH, camera)
@@ -37,7 +44,7 @@ object Main {
           
           // HUD
           g.setColor(new Color(0, 0, 0, 180))
-          g.fillRect(0, 0, displayW, 80)
+          g.fillRect(0, 0, displayW, 100)
           
           // Health bar
           val healthBarWidth = 200
@@ -50,10 +57,19 @@ object Main {
           g.setFont(new Font("Monospaced", Font.BOLD, 18))
           g.drawString(f"Health: ${GameState.health}%.1f", 10, 50)
           g.drawString(f"Distance: ${GameState.distance}%.0f m", 10, 70)
+          g.drawString(f"Speed: ${GameState.currentSpeed}%.1f", 10, 90)
           
-          // FPS
           g.setFont(new Font("Monospaced", Font.PLAIN, 14))
           g.drawString(s"FPS: $fps", displayW - 80, 20)
+          
+          // Checkpoint message
+          val timeSinceCheckpoint = System.currentTimeMillis() - checkpointMessageTime
+          if (timeSinceCheckpoint < 2000) {
+            val alpha = if (timeSinceCheckpoint < 1000) 255 else (255 * (2000 - timeSinceCheckpoint) / 1000).toInt
+            g.setColor(new Color(0, 255, 0, alpha))
+            g.setFont(new Font("Monospaced", Font.BOLD, 36))
+            g.drawString(s"CHECKPOINT! +20 HP", displayW / 2 - 180, displayH / 2)
+          }
           
           // Warning when low health
           if (healthPercent < 0.3f) {
@@ -75,7 +91,6 @@ object Main {
           g.setFont(new Font("Monospaced", Font.BOLD, 32))
           g.drawString(f"Distance: ${GameState.distance}%.0f m", displayW / 2 - 120, 140)
           
-          // High scores
           g.setFont(new Font("Monospaced", Font.BOLD, 24))
           g.drawString("HIGH SCORES", displayW / 2 - 90, 200)
           
@@ -91,14 +106,13 @@ object Main {
           g.setFont(new Font("Monospaced", Font.PLAIN, 16))
           g.drawString("Press R to restart", displayW / 2 - 90, displayH - 40)
           
-          // Check for restart
           if (inputHandler.keys.contains(java.awt.event.KeyEvent.VK_R)) {
             GameState.reset()
             camera = Camera.default
+            checkpointMessageTime = 0L
           }
         }
         
-        // FPS counter
         frameCount += 1
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastFpsTime >= 1000) {

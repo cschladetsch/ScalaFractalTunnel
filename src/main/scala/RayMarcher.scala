@@ -7,6 +7,7 @@ object RayMarcher {
   
   val MAT_TUNNEL = 0
   val MAT_PROJECTILE = 1
+  val MAT_PICKUP = 2
   
   def march(origin: Vec3, direction: Vec3): Option[Hit] = {
     var t = 0.1f
@@ -43,10 +44,14 @@ object RayMarcher {
     val r = math.sqrt(dx*dx + dy*dy).toFloat
     val angle = math.atan2(dy, dx).toFloat
     
-    // Base radius varies
-    val baseRadius = 7f + math.sin(p.z * 0.18f).toFloat * 1.5f
+    // Base radius varies - with NARROW SECTIONS
+    val radiusWave1 = math.sin(p.z * 0.18f).toFloat * 1.5f
+    val radiusWave2 = math.sin(p.z * 0.09f).toFloat * 2f  // Slower variation creates narrow sections
+    val narrowSection = math.sin(p.z * 0.05f).toFloat * 2f  // Even slower for dramatic narrows
     
-    // MULTI-SCALE FRACTAL DISPLACEMENT
+    val baseRadius = 7f + radiusWave1 + radiusWave2 + narrowSection
+    
+    // Multi-scale fractal displacement
     val freq1 = math.sin(angle * 8f + p.z * 0.6f + t * 0.3f).toFloat * 1.0f
     val freq2 = math.sin(angle * 16f - p.z * 1.2f).toFloat * 0.5f
     val freq3 = math.cos(angle * 32f + p.z * 2.4f).toFloat * 0.25f
@@ -56,10 +61,21 @@ object RayMarcher {
     val fractalDisplacement = freq1 + freq2 + freq3 + freq4 + freq5
     
     val tunnel = baseRadius + fractalDisplacement - r
+    
+    // Health pickups
+    val pickups = GameState.getActivePickups()
+    val pickupDist = if (pickups.isEmpty) Float.MaxValue
+    else pickups.map(pickup => (p - pickup.position).length - 0.8f).min
+    
     val proj = ProjectileSystem.projectileSDF(p)
     
-    if (proj < tunnel) (proj, MAT_PROJECTILE)
-    else (tunnel, MAT_TUNNEL)
+    val dists = List(
+      (tunnel, MAT_TUNNEL),
+      (proj, MAT_PROJECTILE),
+      (pickupDist, MAT_PICKUP)
+    )
+    
+    dists.minBy(_._1)
   }
   
   def getNormal(p: Vec3): Vec3 = {

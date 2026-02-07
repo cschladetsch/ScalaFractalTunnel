@@ -1,11 +1,10 @@
 import java.awt.event.{KeyEvent, KeyListener}
 
 class InputHandler extends KeyListener {
-  var keys = Set[Int]()  // Made public
+  var keys = Set[Int]()
   private var lastShotTime = 0L
   private val shotCooldown = 250L
   
-  val baseSpeed = 8f
   val strafeSpeed = 5f
   
   override def keyPressed(e: KeyEvent): Unit = {
@@ -28,8 +27,8 @@ class InputHandler extends KeyListener {
       newCamera = newCamera.copy(position = camera.position + toCenter)
     }
     
-    // Auto forward
-    val forwardMove = camera.forward * baseSpeed * dt
+    // Auto forward with dynamic speed
+    val forwardMove = camera.forward * GameState.currentSpeed * dt
     
     // Steering
     var strafeMove = Vec3(0, 0, 0)
