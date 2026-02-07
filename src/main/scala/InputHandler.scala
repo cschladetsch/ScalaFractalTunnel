@@ -1,12 +1,12 @@
 import java.awt.event.{KeyEvent, KeyListener}
 
 class InputHandler extends KeyListener {
-  private var keys = Set[Int]()
+  var keys = Set[Int]()  // Made public
   private var lastShotTime = 0L
   private val shotCooldown = 250L
   
-  val baseSpeed = 8f  // Reduced from 15f
-  val strafeSpeed = 5f  // Reduced from 8f
+  val baseSpeed = 8f
+  val strafeSpeed = 5f
   
   override def keyPressed(e: KeyEvent): Unit = {
     keys = keys + e.getKeyCode
@@ -40,7 +40,6 @@ class InputHandler extends KeyListener {
     if (keys.contains(KeyEvent.VK_R)) strafeMove = strafeMove + camera.up * strafeSpeed * dt
     if (keys.contains(KeyEvent.VK_F)) strafeMove = strafeMove - camera.up * strafeSpeed * dt
     
-    // Try forward + strafe separately for better collision handling
     val testForward = tryMoveWithSlide(newCamera.position + forwardMove, newCamera.position)
     val finalPos = tryMoveWithSlide(testForward + strafeMove, testForward)
     
@@ -59,26 +58,20 @@ class InputHandler extends KeyListener {
   }
   
   def tryMoveWithSlide(newPos: Vec3, oldPos: Vec3): Vec3 = {
-    val collisionRadius = 0.6f  // Reduced from 0.8f for more room
+    val collisionRadius = 0.6f
     val (dist, _) = RayMarcher.sceneSDF(newPos)
     
     if (dist > collisionRadius) {
-      // Free movement
       newPos
     } else if (dist > 0.1f) {
-      // Near wall - slide along surface
       val normal = RayMarcher.getNormal(newPos)
       val moveDir = (newPos - oldPos)
-      
-      // Remove component pointing into wall
       val slideVec = moveDir - normal * moveDir.dot(normal) * 1.2f
       val slidePos = oldPos + slideVec
       
-      // Check if slide is safe
       val (slideDist, _) = RayMarcher.sceneSDF(slidePos)
       if (slideDist > 0.3f) slidePos else oldPos
     } else {
-      // Too close to wall - push back
       val normal = RayMarcher.getNormal(newPos)
       oldPos + normal * 0.1f
     }
