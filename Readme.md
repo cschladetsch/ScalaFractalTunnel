@@ -6,7 +6,7 @@ An endless runner game through procedurally-generated fractal tunnels, built ent
 
 I cannot play well:
 
-[Demo](/resources/Demo1.gif)
+![Demo](/resources/Demo1.gif)
 
 ## What Makes This Different
 
