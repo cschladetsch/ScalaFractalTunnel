@@ -10,7 +10,7 @@ case class Camera(
     val cy = math.cos(yaw).toFloat
     val sy = math.sin(yaw).toFloat
     
-    Vec3(sy * cp, sp, cy * cp).normalized  // Changed: sy/cy order
+    Vec3(sy * cp, sp, cy * cp).normalized
   }
   
   def right: Vec3 = {
@@ -42,5 +42,5 @@ case class Camera(
 }
 
 object Camera {
-  def default: Camera = Camera(Vec3(0, 0, -5), 0f, 0f, 0f)  // Start back from sphere
+  def default: Camera = Camera(Vec3(0, 0, 0), 0f, 0f, 0f)  // Start in tunnel
 }

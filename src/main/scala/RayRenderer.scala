@@ -19,10 +19,18 @@ object RayRenderer {
           val diffuse = math.max(0f, normal.dot(lightDir))
           val intensity = 0.2f + diffuse * 0.8f
           
+          // Material colors
+          val baseColor = hit.materialId match {
+            case RayMarcher.MAT_TUNNEL => (100, 100, 120)    // Blue-grey
+            case RayMarcher.MAT_WALL => (150, 80, 60)        // Brown
+            case RayMarcher.MAT_OBSTACLE => (200, 50, 50)    // Red
+            case _ => (180, 180, 180)
+          }
+          
           new Color(
-            (intensity * 255).toInt,
-            (intensity * 200).toInt,
-            (intensity * 180).toInt
+            (intensity * baseColor._1).toInt min 255,
+            (intensity * baseColor._2).toInt min 255,
+            (intensity * baseColor._3).toInt min 255
           )
         
         case None =>

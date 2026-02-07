@@ -8,8 +8,10 @@ object Main {
   var lastTime = System.nanoTime()
   
   def main(args: Array[String]): Unit = {
-    val w = 640
-    val h = 480
+    val renderW = 320
+    val renderH = 240
+    val displayW = 640
+    val displayH = 480
     
     val frame = new JFrame("Descent Clone - WASD/Space/Shift to move, Arrows/Q/E to rotate")
     val panel = new JPanel() {
@@ -20,14 +22,16 @@ object Main {
         
         camera = inputHandler.updateCamera(camera, dt)
         
-        val img = RayRenderer.render(w, h, camera)
-        g.drawImage(img, 0, 0, null)
+        val img = RayRenderer.render(renderW, renderH, camera)
+        
+        // Scale 2x for display - nearest neighbor for chunky pixels
+        g.drawImage(img, 0, 0, displayW, displayH, null)
         
         // Continuous repaint
         SwingUtilities.invokeLater(() => repaint())
       }
       
-      override def getPreferredSize(): Dimension = new Dimension(w, h)
+      override def getPreferredSize(): Dimension = new Dimension(displayW, displayH)
     }
     
     panel.setFocusable(true)
