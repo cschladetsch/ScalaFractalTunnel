@@ -2,6 +2,12 @@
 
 An endless runner game through procedurally-generated fractal tunnels, built entirely with ray marching. Created as a technical demo showcasing real-time SDF (Signed Distance Field) rendering in Scala 3.
 
+## Demo
+
+I cannot play well:
+
+![Demo](resources/Demo1.gif)
+
 ## What Makes This Different
 
 Unlike traditional polygon-based 3D games, this uses **pure mathematical ray marching** to render impossible geometry:
