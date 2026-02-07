@@ -18,31 +18,50 @@ object RayRenderer {
           val lightDir = Vec3(0.3f, -0.5f, -0.8f).normalized
           val diffuse = math.max(0f, normal.dot(lightDir))
           
-          // Distance-based fog and color variation
-          val fogAmount = math.min(1f, hit.distance / 50f)
-          val depthColor = 1f - fogAmount * 0.5f
+          // Ambient occlusion approximation from ray steps
+          val ao = 1f - (hit.steps.toFloat / 80f) * 0.6f
           
-          // Position-based color variation
-          val colorShift = (
-            math.sin(hit.point.z * 0.1).toFloat * 0.3f + 0.7f,
-            math.sin(hit.point.z * 0.15 + 2).toFloat * 0.3f + 0.7f,
-            math.sin(hit.point.z * 0.12 + 4).toFloat * 0.3f + 0.7f
+          // Distance fog
+          val fogAmount = math.min(1f, hit.distance / 60f)
+          val depthFade = 1f - fogAmount * 0.7f
+          
+          // Position-based color cycling
+          val cycle = (
+            math.sin(hit.point.z * 0.08f + System.currentTimeMillis() * 0.0005f).toFloat * 0.4f + 0.6f,
+            math.sin(hit.point.z * 0.11f + System.currentTimeMillis() * 0.0007f + 2).toFloat * 0.4f + 0.6f,
+            math.sin(hit.point.z * 0.09f + System.currentTimeMillis() * 0.0006f + 4).toFloat * 0.4f + 0.6f
           )
           
           val baseColor = hit.materialId match {
             case RayMarcher.MAT_TUNNEL =>
-              // Rainbow tunnel walls
-              val r = (150 * colorShift._1 * depthColor).toInt
-              val g = (100 * colorShift._2 * depthColor).toInt
-              val b = (200 * colorShift._3 * depthColor).toInt
+              // Iridescent tunnel walls
+              val r = (120 * cycle._1 * depthFade).toInt
+              val g = (80 * cycle._2 * depthFade).toInt  
+              val b = (200 * cycle._3 * depthFade).toInt
               (r, g, b)
               
-            case RayMarcher.MAT_GLOW =>
-              // Bright glowing orbs
-              val glow = 1.5f - fogAmount
-              val r = (255 * glow).toInt min 255
-              val g = (150 * glow * colorShift._2).toInt min 255
-              val b = (200 * glow * colorShift._3).toInt min 255
+            case RayMarcher.MAT_FRACTAL =>
+              // Impossible geometry - shifting colors
+              val r = (200 * cycle._2 * depthFade).toInt
+              val g = (150 * cycle._1 * depthFade).toInt
+              val b = (100 * cycle._3 * depthFade).toInt
+              (r, g, b)
+              
+            case RayMarcher.MAT_CRYSTAL =>
+              // Glowing crystals
+              val glow = (1.3f - fogAmount) * ao
+              val r = (255 * glow * cycle._3).toInt min 255
+              val g = (180 * glow * cycle._1).toInt min 255
+              val b = (255 * glow * cycle._2).toInt min 255
+              (r, g, b)
+              
+            case RayMarcher.MAT_ENERGY =>
+              // Pulsating energy orbs
+              val pulse = math.sin(System.currentTimeMillis() * 0.003f).toFloat * 0.3f + 1f
+              val glow = pulse * (1.5f - fogAmount)
+              val r = (200 * glow * cycle._1).toInt min 255
+              val g = (255 * glow).toInt min 255
+              val b = (150 * glow * cycle._3).toInt min 255
               (r, g, b)
               
             case RayMarcher.MAT_PROJECTILE =>
@@ -51,7 +70,7 @@ object RayRenderer {
             case _ => (180, 180, 180)
           }
           
-          val intensity = 0.3f + diffuse * 0.7f
+          val intensity = (0.4f + diffuse * 0.6f) * ao
           
           new Color(
             (intensity * baseColor._1).toInt min 255,
@@ -60,12 +79,19 @@ object RayRenderer {
           )
         
         case None =>
-          // Colorful space background based on ray direction
-          val starField = if (math.random() < 0.001) 200 else 0
-          val r = (rayDir.x * 30 + 20 + starField).toInt max 0 min 255
-          val g = (rayDir.y * 30 + 30 + starField).toInt max 0 min 255
-          val b = (rayDir.z * 50 + 40 + starField).toInt max 0 min 255
-          new Color(r, g, b)
+          // Nebula background
+          val nebula = (
+            math.sin(rayDir.x * 5f + rayDir.z * 3f).toFloat * 0.5f + 0.5f,
+            math.sin(rayDir.y * 4f + rayDir.z * 2f).toFloat * 0.5f + 0.5f,
+            math.sin(rayDir.z * 6f + rayDir.x * 2f).toFloat * 0.5f + 0.5f
+          )
+          val stars = if (math.random() < 0.002) 255 else 0
+          
+          new Color(
+            (nebula._1 * 60 + stars).toInt min 255,
+            (nebula._2 * 40 + stars).toInt min 255,
+            (nebula._3 * 80 + stars).toInt min 255
+          )
       }
       
       img.setRGB(x, y, color.getRGB)
