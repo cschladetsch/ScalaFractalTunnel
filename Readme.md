@@ -1,4 +1,3 @@
-cat > README.md << 'EOF'
 # Fractal Tunnel Runner
 
 An endless runner game through procedurally-generated fractal tunnels, built entirely with ray marching. Created as a technical demo showcasing real-time SDF (Signed Distance Field) rendering in Scala 3.
@@ -144,13 +143,15 @@ Performance note: Renders at 213×160 scaled to 640×480 for ~30 FPS on modest h
 
 ## Development Context
 
-Built in ~12 hours as a Scala technical demo for a CEO interview, showcasing:
+Built in ~12 hours as a Scala technical demo showcasing:
 - Functional programming patterns (immutable state, case classes)
 - Real-time graphics algorithms
 - Game loop architecture
 - Mathematical/algorithmic problem solving
 
 The ray marching approach was chosen specifically to demonstrate algorithmic depth beyond typical polygon rendering.
+
+Purposfuly used software only (no GPU, CUDA etc).
 
 ## Future Ideas
 
@@ -169,4 +170,5 @@ MIT
 
 Ray marching technique inspired by Íñigo Quílez's work on ShaderToy.
 Built entirely during a late-night coding session fueled by determination and coffee.
+
 EOF
